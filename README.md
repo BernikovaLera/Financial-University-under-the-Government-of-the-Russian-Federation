@@ -1,1 +1,1 @@
-# Financial-University-under-the-Government-of-the-Russian-Federation
+# Учебные материалы по направлению ПИ факультета ИТиАБД в ФУ при Правительстве РФ
