@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Техническая поддержка</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #e9f7ff; /* Светло-голубой фон */
+            color: #343a40; /* Темный текст для контраста */
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh; /* Минимальная высота для заполнения экрана */
+            margin: 0; /* Убираем отступы */
+
+        }
+        th {
+            cursor: pointer; /* Указывает, что элемент кликабельный */
+            transition: background-color 0.3s; /* Плавный переход цвета */
+        }
+
+        th:hover {
+            background-color: #f0f0f0; /* Цвет фона при наведении */
+        }
+        .footer {
+            width: 100%; /* Ширина подвала на всю страницу */
+            padding: 20px;
+            background-color: #343a40; /* Черный фон для подвала */
+            color: white;
+            text-align: center; /* Центрирование текста */
+            margin-top: auto; /* Отталкиваем подвал вниз */
+        }
+        .container {
+            margin-top: 50px;
+            margin-bottom: 30px;
+        }
+        .card {
+            box-shadow: 0 4px 8px rgb(232, 245, 253);
+            padding: 20px;
+        }
+        .btn-custom {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-custom:hover {
+            background-color: #0056b3;
+        }
+        .btn-container {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <!-- Блок авторизации -->
+    <div class="btn-container">
+        <div th:if="${user.email != null}" class="d-flex gap-2">
+            <span class="text-dark align-self-center">Пользователь: [[${user.name}]]</span><br>
+            <form th:action="@{/logout}" method="post">
+                <input type="hidden" name="_csrf" th:value="${_csrf.token}">
+                <button type="submit" class="btn btn-custom">Выйти</button>
+            </form>
+            <a th:href="@{/admin}" th:if="${user.isAdmin()}" class="btn btn-custom">Админ-панель</a>
+        </div>
+        <a th:href="@{/login}" th:unless="${user.email != null}" class="btn btn-custom">Войти</a>
+    </div>
+
+    <!-- Заголовок и основная карточка -->
+    <blockquote class="blockquote text-center"><h1>Мои заявки</h1></blockquote>
+    <div class="card">
+        <!-- Поиск и добавление -->
+        <div class="btn-container mb-4">
+            <form th:action="@{/req/}" method="get" class="d-flex gap-2 w-100">
+                <input type="text" name="keyword" class="form-control" placeholder="Поиск заявок..." th:value="${keyword}">
+                <input type="submit" class="btn btn-success" value="Найти">
+                <input type="button" class="btn btn-warning" value="Очистить" onclick="clearSearch()">
+            </form>
+            <a th:href="@{/req/create}" class="btn btn-custom">Добавить заявку</a>
+        </div>
+
+
+        <!-- Таблица -->
+        <table id="requestsTable" class="table table-striped table-hover">
+            <thead>
+            <tr>
+                <th scope="col" onclick="sortTable(0)" title="Сортировать по номеру заявки">Номер заявки</th>
+                <th scope="col" onclick="sortTable(1)" title="Сортировать по теме">Тема</th>
+                <th scope="col" onclick="sortTable(2)" title="Сортировать по дате создания">Дата создания</th>
+                <th scope="col" onclick="sortTable(3)" title="Сортировать по дате изменения">Дата изменения</th>
+                <th scope="col" onclick="sortTable(4)" title="Сортировать по статусу">Статус</th>
+                <th scope="col" onclick="sortTable(5)" title="Сортировать по описанию">Описание</th>
+                <th scope="col">Действия</th>
+            </tr>
+            </thead>
+
+            <tbody>
+            <tr th:each="request : ${listRequest}">
+                <td th:text="${request.id}">Номер заявки отсутствует</td>
+                <td th:text="${request.title}">Тема отсутствует</td>
+                <td th:text="${request.createdDate}">Дата создания отсутствует</td>
+                <td th:text="${request.modifiedDate}">Дата изменения отсутствует</td>
+                <td th:text="${request.status}">Статус отсутствует</td>
+                <td th:text="${request.description}">Описание отсутствует</td>
+                <td>
+                    <a th:href="@{'/req/edit/'+${request.id}}"><button type="button" class="btn btn-primary">Редактировать</button></a>
+                    <a th:href="@{'/req/delete/'+${request.id}}" th:if="${#authorization.expression('hasRole(''ROLE_ADMIN'')')}"><button type="button" class="btn btn-danger">Удалить</button></a>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<footer class="footer text-center mt-auto">
+    <div class="container">
+        <span>&copy; 2025 Все права защищены.</span>
+    </div>
+</footer>
+
+<script type="text/javascript">
+    function clearSearch() {
+        window.location = "[[@{/req/}]]";
+    }
+
+    function sortTable(columnIndex) {
+        const requestsTable = document.getElementById('requestsTable');
+        const tbody = requestsTable.querySelector('tbody');
+        const rows = Array.from(tbody.rows);
+        const isAscending = !tbody.dataset.sortOrder || tbody.dataset.sortOrder === 'desc';
+
+        rows.sort((a, b) => { //Сравнение ячеек
+            const cellA = a.cells[columnIndex].innerText;
+            const cellB = b.cells[columnIndex].innerText;
+
+            if (columnIndex === 2 || columnIndex === 3) { // Сортировка по датам
+                return isAscending ? new Date(cellA) - new Date(cellB) : new Date(cellB) - new Date(cellA);
+            } else if (columnIndex === 0) { //  Сортировка по номеру заявки
+                return isAscending ? cellA - cellB : cellB - cellA;
+            } else { //Сортировка по строкам
+                return isAscending ? cellA.localeCompare(cellB) : cellB.localeCompare(cellA);
+            }
+        });
+
+        // Очистить tbody и добавить отсортированные строки
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+
+        // Обновить порядок сортировки
+        tbody.dataset.sortOrder = isAscending ? 'asc' : 'desc';
+    }
+
+    // Изночальное отображение от последний записи
+    document.addEventListener('DOMContentLoaded', function() {
+        const requestsTable = document.getElementById('requestsTable');
+        const tbody = requestsTable.querySelector('tbody');
+        const rows = Array.from(tbody.rows);
+
+        rows.sort((a, b) => {
+            const dateA = new Date(a.cells[3].innerText); // Дата изменения
+            const dateB = new Date(b.cells[3].innerText);
+            return dateB - dateA; // Сортировка по убыванию
+        });
+
+        // Очистить tbody и добавить отсортированные строки
+        tbody.innerHTML = '';
+        rows.forEach(row => tbody.appendChild(row));
+    });
+</script>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+
+</body>
+</html>
